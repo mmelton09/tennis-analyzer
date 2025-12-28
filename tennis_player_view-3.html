@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATP Serve Analysis | Player View</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --court-green: #2d5016;
+            --court-blue: #0066cc;
+            --ball-yellow: #d4ff00;
+            --chalk-white: #f8f9fa;
+            --clay-red: #c45a3c;
+            --net-shadow: #1a1a1a;
+            --grass-accent: #4a7c2f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Mono', monospace;
+            background: linear-gradient(135deg, var(--court-green) 0%, #1a3a0f 100%);
+            color: var(--chalk-white);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(90deg, rgba(248,249,250,0.03) 1px, transparent 1px),
+                linear-gradient(rgba(248,249,250,0.03) 1px, transparent 1px);
+            background-size: 100px 100px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            padding: 3rem 0;
+        }
+
+        h1 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(2.5rem, 8vw, 6rem);
+            letter-spacing: 0.05em;
+            color: var(--ball-yellow);
+            text-shadow: 
+                3px 3px 0 var(--net-shadow),
+                6px 6px 0 rgba(0,0,0,0.3);
+            margin-bottom: 1rem;
+            animation: slideIn 0.8s ease-out;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--chalk-white);
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .theory-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid var(--ball-yellow);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .file-upload {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(212,255,0,0.1);
+            border-radius: 8px;
+            border-left: 3px solid var(--ball-yellow);
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-upload label {
+            display: inline-block;
+            background: var(--ball-yellow);
+            color: var(--net-shadow);
+            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(212,255,0,0.3);
+        }
+
+        .file-upload label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212,255,0,0.5);
+        }
+
+        .file-status {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--ball-yellow);
+        }
+
+        .results-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            margin-bottom: 2rem;
+        }
+
+        .results-section h2 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem;
+            color: var(--ball-yellow);
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--ball-yellow);
+            font-weight: 600;
+        }
+
+        input, select {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            color: var(--chalk-white);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--ball-yellow);
+            background: rgba(255,255,255,0.15);
+        }
+
+        button {
+            background: var(--ball-yellow);
+            color: var(--net-shadow);
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(212,255,0,0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212,255,0,0.5);
+        }
+
+        /* Player Table */
+        .player-row {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .player-row:hover {
+            background: rgba(212,255,0,0.05);
+        }
+
+        .player-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 100px;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .player-row.expanded .player-header {
+            position: sticky;
+            top: 60px;
+            z-index: 50;
+            background: rgba(0,0,0,0.95);
+            border-bottom: 2px solid var(--ball-yellow);
+        }
+
+        .static-sort-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(26,26,26,0.95);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            padding: 0.75rem 1.5rem;
+            border: 1px solid rgba(212,255,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .static-sort-header .grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 100px;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .static-sort-header .sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .static-sort-header .sortable:hover {
+            background: rgba(212,255,0,0.1);
+        }
+
+        .sortable::after {
+            content: ' ↕';
+            opacity: 0.3;
+            font-size: 0.8em;
+        }
+
+        .sortable.sort-desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+
+        .sortable.sort-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+
+        .player-header:hover {
+            background: rgba(212,255,0,0.1);
+        }
+
+        .player-name {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.5rem;
+            color: var(--ball-yellow);
+            letter-spacing: 0.05em;
+        }
+
+        .player-stat {
+            text-align: center;
+        }
+
+        .player-stat-label {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            text-transform: uppercase;
+        }
+
+        .player-stat-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--ball-yellow);
+        }
+
+        .expand-icon {
+            text-align: center;
+            font-size: 1.5rem;
+            color: var(--ball-yellow);
+            transition: transform 0.3s ease;
+        }
+
+        .player-row.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .match-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .player-row.expanded .match-details {
+            max-height: 5000px;
+        }
+
+        .match-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .match-table th {
+            padding: 1rem;
+            text-align: left;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--ball-yellow);
+            opacity: 0.8;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            position: sticky;
+            top: 130px;
+            background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(10px);
+            z-index: 5;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+
+        .match-table th:hover {
+            opacity: 1;
+            background: rgba(212,255,0,0.1);
+        }
+
+        .match-table th::after {
+            content: ' ↕';
+            opacity: 0.3;
+            font-size: 0.8em;
+        }
+
+        .match-table th.sort-desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+
+        .match-table th.sort-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+
+        .match-table td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.9rem;
+        }
+
+        .match-table tr:hover {
+            background: rgba(212,255,0,0.05);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-better {
+            background: var(--ball-yellow);
+            color: var(--net-shadow);
+        }
+
+        .badge-worse {
+            background: rgba(255,107,107,0.3);
+            color: #ff6b6b;
+        }
+
+        .benefit-positive {
+            color: var(--ball-yellow);
+            font-weight: 600;
+        }
+
+        .benefit-negative {
+            color: #ff6b6b;
+            opacity: 0.6;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.2rem;
+            color: var(--ball-yellow);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .player-header {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+
+            .match-table {
+                font-size: 0.75rem;
+            }
+
+            .match-table th, .match-table td {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>THE SERVE PARADOX</h1>
+            <p class="subtitle">
+                Player-level analysis: Click any player to see their individual matches
+            </p>
+        </header>
+
+        <div class="theory-card">
+            <h2 style="font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--ball-yellow); margin-bottom: 1rem;">Load Data</h2>
+            
+            <div class="file-upload">
+                <p style="margin-bottom: 1rem; font-size: 0.9rem;">
+                    <strong>Upload CSV:</strong> Load serve_analysis_all_matches.csv from the Python analyzer
+                </p>
+                <input type="file" id="csvFile" accept=".csv">
+                <label for="csvFile">Choose CSV File</label>
+                <div class="file-status" id="fileStatus">No file loaded</div>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <h2>Players Analysis</h2>
+            
+            <div class="controls">
+                <div class="input-group">
+                    <label for="playerFilter">Search Player</label>
+                    <input type="text" id="playerFilter" placeholder="e.g., Djokovic">
+                </div>
+                <div class="input-group">
+                    <label for="minMatches">Min Matches</label>
+                    <input type="number" id="minMatches" value="5" min="1" max="100">
+                </div>
+                <div class="input-group">
+                    <label>&nbsp;</label>
+                    <button onclick="applyFilters()">Apply Filters</button>
+                </div>
+            </div>
+
+            <div id="playerList">
+                <!-- Static header row for sorting -->
+                <div class="static-sort-header">
+                    <div class="grid">
+                        <div class="sortable " onclick="sortPlayerList('player'); renderPlayers();" style="font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: var(--ball-yellow); letter-spacing: 0.05em;">
+                            Player Name
+                        </div>
+                        <div class="sortable " onclick="sortPlayerList('total_matches'); renderPlayers();" style="text-align: center; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ball-yellow);">
+                            Matches
+                        </div>
+                        <div class="sortable " onclick="sortPlayerList('benefit_rate'); renderPlayers();" style="text-align: center; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ball-yellow);">
+                            Better %
+                        </div>
+                        <div class="sortable " onclick="sortPlayerList('times_better'); renderPlayers();" style="text-align: center; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ball-yellow);">
+                            Times Better
+                        </div>
+                        <div class="sortable " onclick="sortPlayerList('avg_benefit'); renderPlayers();" style="text-align: center; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ball-yellow);">
+                            Avg Benefit
+                        </div>
+                        <div class="sortable " onclick="sortPlayerList('potential_flips'); renderPlayers();" style="text-align: center; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ball-yellow);">
+                            Could Flip
+                        </div>
+                        <div style="text-align: center; font-size: 0.75rem; opacity: 0.3;">
+                            ▼
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            Upload the CSV file to view player analysis
+        </div>
+    </div>
+
+    <script>
+        let allMatches = [];
+        let playerStats = [];
+        let filteredPlayers = [];
+        let playerSortState = { column: 'benefit_rate', direction: 'desc' };
+        let matchSortStates = {}; // Track sort state per player
+
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    parseCSV(event.target.result);
+                };
+                reader.readAsText(file);
+                document.getElementById('fileStatus').textContent = `Loading ${file.name}...`;
+            }
+        });
+
+        function parseCSV(csv) {
+            const lines = csv.split('\n');
+            const headers = lines[0].split(',');
+            
+            allMatches = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim() === '') continue;
+                
+                const values = parseCSVLine(lines[i]);
+                if (values.length < headers.length) continue;
+                
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header.trim()] = values[index] ? values[index].trim() : '';
+                });
+                
+                // Filter out retired matches
+                const score = row.score || '';
+                if (score.includes('RET') || score.includes('W/O') || score.includes('DEF')) {
+                    continue;
+                }
+                
+                allMatches.push(row);
+            }
+            
+            document.getElementById('fileStatus').textContent = `✓ Loaded ${allMatches.length.toLocaleString()} performances`;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            aggregateByPlayer();
+            applyFilters();
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current);
+            
+            return result;
+        }
+
+        function aggregateByPlayer() {
+            const playerMap = {};
+            
+            allMatches.forEach(match => {
+                const player = match.player;
+                if (!player) return;
+                
+                if (!playerMap[player]) {
+                    playerMap[player] = {
+                        player: player,
+                        matches: [],
+                        total_matches: 0,
+                        times_better: 0,
+                        avg_benefit: 0,
+                        potential_wins: 0,
+                        potential_losses: 0
+                    };
+                }
+                
+                playerMap[player].matches.push(match);
+                playerMap[player].total_matches++;
+                
+                if (match.only_first_better === 'True') {
+                    playerMap[player].times_better++;
+                }
+                
+                // Track potential result flips
+                if (match.could_flip_result === 'True') {
+                    if (match.won_match === 'False' && parseFloat(match.benefit_pct || 0) > 0) {
+                        playerMap[player].potential_wins++;
+                    } else if (match.won_match === 'True' && parseFloat(match.benefit_pct || 0) < 0) {
+                        playerMap[player].potential_losses++;
+                    }
+                }
+            });
+            
+            // Calculate averages
+            playerStats = Object.values(playerMap).map(p => {
+                const totalBenefit = p.matches.reduce((sum, m) => sum + parseFloat(m.benefit_pct || 0), 0);
+                p.avg_benefit = p.total_matches > 0 ? totalBenefit / p.total_matches : 0;
+                p.benefit_rate = p.total_matches > 0 ? (p.times_better / p.total_matches) * 100 : 0;
+                return p;
+            });
+        }
+
+        function applyFilters() {
+            const playerFilter = document.getElementById('playerFilter').value.toLowerCase();
+            const minMatches = parseInt(document.getElementById('minMatches').value) || 5;
+            
+            filteredPlayers = playerStats.filter(p => {
+                const nameMatch = !playerFilter || p.player.toLowerCase().includes(playerFilter);
+                const matchesMatch = p.total_matches >= minMatches;
+                return nameMatch && matchesMatch;
+            });
+            
+            sortPlayerList();
+            renderPlayers();
+        }
+
+        function sortPlayerList(column) {
+            if (column) {
+                // User clicked a column header
+                if (playerSortState.column === column) {
+                    playerSortState.direction = playerSortState.direction === 'desc' ? 'asc' : 'desc';
+                } else {
+                    playerSortState.column = column;
+                    // Default direction based on column type
+                    const ascColumns = ['player'];
+                    playerSortState.direction = ascColumns.includes(column) ? 'asc' : 'desc';
+                }
+            }
+            
+            // Sort based on current state
+            filteredPlayers.sort((a, b) => {
+                let aVal, bVal;
+                
+                if (playerSortState.column === 'player') {
+                    aVal = a.player.toLowerCase();
+                    bVal = b.player.toLowerCase();
+                } else {
+                    aVal = a[playerSortState.column] || 0;
+                    bVal = b[playerSortState.column] || 0;
+                }
+                
+                let comparison = 0;
+                if (aVal > bVal) comparison = 1;
+                if (aVal < bVal) comparison = -1;
+                
+                return playerSortState.direction === 'desc' ? -comparison : comparison;
+            });
+        }
+
+        function renderPlayers() {
+            const container = document.getElementById('playerList');
+            
+            // Remove existing player rows (keep the static header)
+            const existingPlayers = container.querySelectorAll('.player-row');
+            existingPlayers.forEach(el => el.remove());
+            
+            // Add player rows
+            filteredPlayers.forEach((player, index) => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'player-row';
+                playerDiv.id = `player-${index}`;
+                
+                playerDiv.innerHTML = `
+                    <div class="player-header" onclick="togglePlayer(${index})">
+                        <div class="player-name">${player.player}</div>
+                        <div style="text-align: center; font-size: 1.1rem; font-weight: 600;">${player.total_matches}</div>
+                        <div style="text-align: center; font-size: 1.1rem; font-weight: 600; color: var(--ball-yellow);">${player.benefit_rate.toFixed(1)}%</div>
+                        <div style="text-align: center; font-size: 1.1rem; font-weight: 600;">${player.times_better}</div>
+                        <div style="text-align: center; font-size: 1.1rem; font-weight: 600;">${player.avg_benefit > 0 ? '+' : ''}${player.avg_benefit.toFixed(2)}pp</div>
+                        <div style="text-align: center; font-size: 1.1rem; font-weight: 600;">${player.potential_wins}W / ${player.potential_losses}L</div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="match-details">
+                        ${renderMatchTable(player.matches, player.player, index)}
+                    </div>
+                `;
+                
+                container.appendChild(playerDiv);
+            });
+            
+            // Update static header sort indicators
+            updateStaticHeaderSortIndicators();
+        }
+        
+        function updateStaticHeaderSortIndicators() {
+            const staticHeader = document.querySelector('.static-sort-header');
+            if (!staticHeader) return;
+            
+            // Clear all sort classes
+            staticHeader.querySelectorAll('.sortable').forEach(el => {
+                el.classList.remove('sort-asc', 'sort-desc');
+            });
+            
+            // Add current sort class to the right column
+            const sortables = staticHeader.querySelectorAll('.sortable');
+            sortables.forEach(el => {
+                const onclick = el.getAttribute('onclick');
+                if (onclick) {
+                    const match = onclick.match(/sortPlayerList\('([^']+)'\)/);
+                    if (match && match[1] === playerSortState.column) {
+                        el.classList.add('sort-' + playerSortState.direction);
+                    }
+                }
+            });
+        }
+
+        function renderMatchTable(matches, playerName, playerIndex) {
+            // Initialize sort state for this player if not exists
+            if (!matchSortStates[playerName]) {
+                matchSortStates[playerName] = { column: 'benefit_pct', direction: 'desc' };
+            }
+            
+            const sortState = matchSortStates[playerName];
+            
+            // Sort matches
+            const sorted = [...matches].sort((a, b) => {
+                let aVal, bVal;
+                
+                // Determine values based on column
+                if (sortState.column === 'opponent' || sortState.column === 'tourney_name' || sortState.column === 'surface') {
+                    aVal = (a[sortState.column] || '').toLowerCase();
+                    bVal = (b[sortState.column] || '').toLowerCase();
+                } else if (sortState.column === 'year') {
+                    aVal = a.tourney_date ? a.tourney_date.substring(0, 4) : '';
+                    bVal = b.tourney_date ? b.tourney_date.substring(0, 4) : '';
+                } else if (sortState.column === 'won_match' || sortState.column === 'could_flip_result' || sortState.column === 'only_first_better') {
+                    aVal = a[sortState.column] === 'True' ? 1 : 0;
+                    bVal = b[sortState.column] === 'True' ? 1 : 0;
+                } else {
+                    // Numeric columns
+                    aVal = parseFloat(a[sortState.column] || 0);
+                    bVal = parseFloat(b[sortState.column] || 0);
+                }
+                
+                let comparison = 0;
+                if (aVal > bVal) comparison = 1;
+                if (aVal < bVal) comparison = -1;
+                
+                return sortState.direction === 'desc' ? -comparison : comparison;
+            });
+            
+            const ascColumns = ['opponent', 'tourney_name', 'surface'];
+            
+            let html = `
+                <table class="match-table">
+                    <thead>
+                        <tr>
+                            <th onclick="sortMatches('${playerName}', ${playerIndex}, 'opponent')" class="${sortState.column === 'opponent' ? 'sort-' + sortState.direction : ''}">Opponent</th>
+                            <th onclick="sortMatches('${playerName}', ${playerIndex}, 'won_match')" class="${sortState.column === 'won_match' ? 'sort-' + sortState.direction : ''}">Result</th>
+                            <th onclick="sortMatches('${playerName}', ${playerIndex}, 'tourney_name')" class="${sortState.column === 'tourney_name' ? 'sort-' + sortState.direction : ''}">Tournament</th>
+                            <th onclick="sortMatches('${playerName}', ${playerIndex}, 'year')" class="${sortState.column === 'year' ? 'sort-' + sortState.direction : ''}">Year</th>
+                            <th onclick="sortMatches('${playerName}', ${playerIndex}, 'best_of')" class="${sortState.column === 'best_of' ? 'sort-' + sortState.direction : ''}">BO</th>
+                            <th onclick="sortMatches('${playerName}', ${playerIndex}, 'surface')" class="${sortState.column === 'surface' ? 'sort-' + sortState.direction : ''}">Surface</th>
+                            <th onclick="sortMatches('${playerName}', ${playerIndex}, 'first_in_pct')" class="${sortState.column === 'first_in_pct' ? 'sort-' + sortState.direction : ''}">1st In %</th>
+                            <th onclick="sortMatches('${playerName}', ${playerIndex}, 'first_win_pct')" class="${sortState.column === 'first_win_pct' ? 'sort-' + sortState.direction : ''}">1st Win %</th>
+                            <th onclick="sortMatches('${playerName}', ${playerIndex}, 'second_win_pct')" class="${sortState.column === 'second_win_pct' ? 'sort-' + sortState.direction : ''}">2nd Win %</th>
+                            <th onclick="sortMatches('${playerName}', ${playerIndex}, 'benefit_pct')" class="${sortState.column === 'benefit_pct' ? 'sort-' + sortState.direction : ''}">Benefit</th>
+                            <th onclick="sortMatches('${playerName}', ${playerIndex}, 'only_first_better')" class="${sortState.column === 'only_first_better' ? 'sort-' + sortState.direction : ''}">Status</th>
+                            <th onclick="sortMatches('${playerName}', ${playerIndex}, 'could_flip_result')" class="${sortState.column === 'could_flip_result' ? 'sort-' + sortState.direction : ''}">Flip?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            sorted.forEach(match => {
+                const year = match.tourney_date ? match.tourney_date.substring(0, 4) : '?';
+                const benefit = parseFloat(match.benefit_pct || 0);
+                const benefitClass = benefit > 0 ? 'benefit-positive' : 'benefit-negative';
+                
+                const resultBadge = match.won_match === 'True' ?
+                    '<span class="badge" style="background: rgba(74,124,47,0.5); color: #d4ff00;">W</span>' :
+                    '<span class="badge" style="background: rgba(196,90,60,0.3); color: #ff6b6b;">L</span>';
+                
+                const boBadge = match.best_of === '5' ? 
+                    '<span class="badge" style="background: rgba(212,255,0,0.3); color: var(--ball-yellow);">BO5</span>' :
+                    '<span class="badge" style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6);">BO3</span>';
+                
+                const statusBadge = match.only_first_better === 'True' ? 
+                    '<span class="badge badge-better">✓ Better</span>' : 
+                    '<span class="badge badge-worse">✗ Worse</span>';
+                
+                let flipBadge = '—';
+                if (match.could_flip_result === 'True') {
+                    const simProb = parseFloat(match.sim_prob_diff || 0);
+                    const numSims = match.num_simulations || 1000;
+                    
+                    if (match.won_match === 'True' && benefit < 0) {
+                        flipBadge = `<span class="badge badge-worse" title="${Math.abs(simProb).toFixed(1)}% more likely to lose (${numSims} sims)">⚠ ${Math.abs(simProb).toFixed(0)}%</span>`;
+                    } else if (match.won_match === 'False' && benefit > 0) {
+                        flipBadge = `<span class="badge badge-better" title="${simProb.toFixed(1)}% more likely to win (${numSims} sims)">★ ${simProb.toFixed(0)}%</span>`;
+                    }
+                }
+                
+                html += `
+                    <tr>
+                        <td>${match.opponent || 'Unknown'}</td>
+                        <td>${resultBadge}</td>
+                        <td>${match.tourney_name || 'Unknown'}</td>
+                        <td>${year}</td>
+                        <td>${boBadge}</td>
+                        <td>${match.surface || '?'}</td>
+                        <td>${parseFloat(match.first_in_pct || 0).toFixed(1)}%</td>
+                        <td>${parseFloat(match.first_win_pct || 0).toFixed(1)}%</td>
+                        <td>${parseFloat(match.second_win_pct || 0).toFixed(1)}%</td>
+                        <td class="${benefitClass}">${benefit > 0 ? '+' : ''}${benefit.toFixed(2)}pp</td>
+                        <td>${statusBadge}</td>
+                        <td style="text-align: center;">${flipBadge}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            return html;
+        }
+
+        function sortMatches(playerName, playerIndex, column) {
+            const sortState = matchSortStates[playerName];
+            
+            // Toggle sort direction
+            if (sortState.column === column) {
+                sortState.direction = sortState.direction === 'desc' ? 'asc' : 'desc';
+            } else {
+                sortState.column = column;
+                // Default direction based on column type
+                const ascColumns = ['opponent', 'tourney_name', 'surface'];
+                sortState.direction = ascColumns.includes(column) ? 'asc' : 'desc';
+            }
+            
+            // Re-render just this player's matches
+            const playerDiv = document.getElementById(`player-${playerIndex}`);
+            const player = filteredPlayers[playerIndex];
+            const matchDetailsDiv = playerDiv.querySelector('.match-details');
+            matchDetailsDiv.innerHTML = renderMatchTable(player.matches, player.player, playerIndex);
+        }
+
+        function togglePlayer(index) {
+            const playerDiv = document.getElementById(`player-${index}`);
+            playerDiv.classList.toggle('expanded');
+        }
+
+        // Auto-apply filters on input
+        document.getElementById('playerFilter').addEventListener('input', applyFilters);
+        document.getElementById('minMatches').addEventListener('change', applyFilters);
+    </script>
+</body>
+</html>

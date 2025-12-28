@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATP Serve Analysis | Real Data from 196,032 Performances</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --court-green: #2d5016;
+            --court-blue: #0066cc;
+            --ball-yellow: #d4ff00;
+            --chalk-white: #f8f9fa;
+            --clay-red: #c45a3c;
+            --net-shadow: #1a1a1a;
+            --grass-accent: #4a7c2f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Mono', monospace;
+            background: linear-gradient(135deg, var(--court-green) 0%, #1a3a0f 100%);
+            color: var(--chalk-white);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Tennis court lines background pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(90deg, rgba(248,249,250,0.03) 1px, transparent 1px),
+                linear-gradient(rgba(248,249,250,0.03) 1px, transparent 1px);
+            background-size: 100px 100px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            padding: 3rem 0;
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(2.5rem, 8vw, 6rem);
+            letter-spacing: 0.05em;
+            color: var(--ball-yellow);
+            text-shadow: 
+                3px 3px 0 var(--net-shadow),
+                6px 6px 0 rgba(0,0,0,0.3);
+            margin-bottom: 1rem;
+            animation: slideIn 0.8s ease-out;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--chalk-white);
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+            animation: fadeIn 1s ease-out 0.3s backwards;
+        }
+
+        /* Theory Card */
+        .theory-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid var(--ball-yellow);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            animation: fadeIn 1s ease-out 0.6s backwards;
+        }
+
+        .theory-card h2 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem;
+            color: var(--ball-yellow);
+            margin-bottom: 1rem;
+            letter-spacing: 0.05em;
+        }
+
+        .formula {
+            background: rgba(0,0,0,0.4);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.1rem;
+            border-left: 4px solid var(--ball-yellow);
+            overflow-x: auto;
+        }
+
+        .file-upload {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(212,255,0,0.1);
+            border-radius: 8px;
+            border-left: 3px solid var(--ball-yellow);
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-upload label {
+            display: inline-block;
+            background: var(--ball-yellow);
+            color: var(--net-shadow);
+            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(212,255,0,0.3);
+        }
+
+        .file-upload label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212,255,0,0.5);
+        }
+
+        .file-status {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--ball-yellow);
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--ball-yellow);
+            font-weight: 600;
+        }
+
+        input, select {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            color: var(--chalk-white);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--ball-yellow);
+            background: rgba(255,255,255,0.15);
+        }
+
+        button {
+            background: var(--ball-yellow);
+            color: var(--net-shadow);
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(212,255,0,0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212,255,0,0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Results Table */
+        .results-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            margin-bottom: 2rem;
+        }
+
+        .results-section h2 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem;
+            color: var(--ball-yellow);
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(0,0,0,0.3);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--ball-yellow);
+        }
+
+        .stat-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.5rem;
+            color: var(--ball-yellow);
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        thead {
+            background: rgba(0,0,0,0.4);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.1rem;
+            letter-spacing: 0.05em;
+            color: var(--ball-yellow);
+            border-bottom: 2px solid var(--ball-yellow);
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            transition: background 0.3s ease;
+        }
+
+        th:hover {
+            background: rgba(212,255,0,0.1);
+        }
+
+        th::after {
+            content: ' ↕';
+            opacity: 0.3;
+            font-size: 0.8em;
+        }
+
+        th.sort-desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+
+        th.sort-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        tbody tr {
+            transition: all 0.3s ease;
+        }
+
+        tbody tr:hover {
+            background: rgba(212,255,0,0.1);
+        }
+
+        .benefit-positive {
+            color: var(--ball-yellow);
+            font-weight: 600;
+        }
+
+        .benefit-negative {
+            color: #ff6b6b;
+            opacity: 0.6;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-better {
+            background: var(--ball-yellow);
+            color: var(--net-shadow);
+        }
+
+        .badge-worse {
+            background: rgba(255,107,107,0.3);
+            color: #ff6b6b;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.2rem;
+            color: var(--ball-yellow);
+        }
+
+        .pagination {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            align-items: center;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+        }
+
+        .pagination .page-info {
+            color: var(--chalk-white);
+            padding: 0 1rem;
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>THE SERVE PARADOX</h1>
+            <p class="subtitle">
+                Analysis of 196,032 ATP player performances (1991-2024) to discover when players 
+                would statistically win more points by only hitting first serves.
+            </p>
+        </header>
+
+        <div class="theory-card">
+            <h2>The Math</h2>
+            <p style="margin-bottom: 1rem;">A player benefits from "only first serves" when:</p>
+            <div class="formula">
+                (1st Serve In % × 1st Serve Win %) > 2nd Serve Win %
+            </div>
+            <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+                When this condition is true, hitting two first serves (accepting double faults) 
+                gives a higher expected point win percentage than the traditional first-then-second approach.
+            </p>
+            
+            <div class="file-upload">
+                <p style="margin-bottom: 1rem; font-size: 0.9rem;">
+                    <strong>Load your real ATP data:</strong> Upload the CSV file generated by the Python analyzer.
+                </p>
+                <input type="file" id="csvFile" accept=".csv">
+                <label for="csvFile">Choose CSV File</label>
+                <div class="file-status" id="fileStatus">No file loaded</div>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <h2>Analysis Results</h2>
+            
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalMatches">0</div>
+                    <div class="stat-label">Total Performances</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="betterCount">0</div>
+                    <div class="stat-label">Would Benefit</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="betterPct">0%</div>
+                    <div class="stat-label">Benefit Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="maxBenefit">0pp</div>
+                    <div class="stat-label">Biggest Advantage</div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="input-group">
+                    <label for="playerFilter">Filter by Player</label>
+                    <input type="text" id="playerFilter" placeholder="e.g., Djokovic">
+                </div>
+                <div class="input-group">
+                    <label for="surfaceFilter">Surface</label>
+                    <select id="surfaceFilter">
+                        <option value="">All Surfaces</option>
+                        <option value="Hard">Hard</option>
+                        <option value="Clay">Clay</option>
+                        <option value="Grass">Grass</option>
+                        <option value="Carpet">Carpet</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="bestOfFilter">Format</label>
+                    <select id="bestOfFilter">
+                        <option value="">All Formats</option>
+                        <option value="3">Best of 3</option>
+                        <option value="5">Best of 5 (Slams)</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="betterOnly">Show Only</label>
+                    <select id="betterOnly">
+                        <option value="">All Results</option>
+                        <option value="true">Benefits Only</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>&nbsp;</label>
+                    <button onclick="applyFilters()">Apply Filters</button>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('player')" data-column="player">Player</th>
+                            <th onclick="sortTable('opponent')" data-column="opponent">Opponent</th>
+                            <th onclick="sortTable('won_match')" data-column="won_match">Result</th>
+                            <th onclick="sortTable('tourney_name')" data-column="tourney_name">Tournament</th>
+                            <th onclick="sortTable('year')" data-column="year">Year</th>
+                            <th onclick="sortTable('best_of')" data-column="best_of">BO</th>
+                            <th onclick="sortTable('surface')" data-column="surface">Surface</th>
+                            <th onclick="sortTable('first_in_pct')" data-column="first_in_pct">1st In %</th>
+                            <th onclick="sortTable('first_win_pct')" data-column="first_win_pct">1st Win %</th>
+                            <th onclick="sortTable('second_win_pct')" data-column="second_win_pct">2nd Win %</th>
+                            <th onclick="sortTable('benefit_pct')" data-column="benefit_pct" class="sort-desc">Benefit</th>
+                            <th onclick="sortTable('only_first_better')" data-column="only_first_better">Status</th>
+                            <th onclick="sortTable('could_flip_result')" data-column="could_flip_result" title="Could adopting 'only 1st serves' have changed match outcome?">Flip?</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination">
+                <button onclick="changePage(-1)">← Previous</button>
+                <span class="page-info">
+                    Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                    (<span id="showingCount">0</span> results)
+                </span>
+                <button onclick="changePage(1)">Next →</button>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            Upload the CSV file (serve_analysis_all_matches.csv) to view results
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const rowsPerPage = 100;
+        let currentSort = { column: 'benefit_pct', direction: 'desc' };
+
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    parseCSV(event.target.result);
+                };
+                reader.readAsText(file);
+                document.getElementById('fileStatus').textContent = `Loading ${file.name}...`;
+            }
+        });
+
+        function parseCSV(csv) {
+            const lines = csv.split('\n');
+            const headers = lines[0].split(',');
+            
+            allData = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim() === '') continue;
+                
+                const values = parseCSVLine(lines[i]);
+                if (values.length < headers.length) continue;
+                
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header.trim()] = values[index] ? values[index].trim() : '';
+                });
+                
+                // Filter out retired matches (score contains "RET" or "W/O")
+                const score = row.score || '';
+                if (score.includes('RET') || score.includes('W/O') || score.includes('DEF')) {
+                    continue;
+                }
+                
+                allData.push(row);
+            }
+            
+            document.getElementById('fileStatus').textContent = `✓ Loaded ${allData.length.toLocaleString()} performances`;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            filteredData = [...allData];
+            updateStats();
+            renderTable();
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current);
+            
+            return result;
+        }
+
+        function updateStats() {
+            const total = filteredData.length;
+            const betterCount = filteredData.filter(d => d.only_first_better === 'True').length;
+            const betterPct = total > 0 ? ((betterCount / total) * 100).toFixed(1) : 0;
+            const maxBenefit = Math.max(...filteredData.map(d => parseFloat(d.benefit_pct || 0))).toFixed(2);
+            
+            document.getElementById('totalMatches').textContent = total.toLocaleString();
+            document.getElementById('betterCount').textContent = betterCount.toLocaleString();
+            document.getElementById('betterPct').textContent = betterPct + '%';
+            document.getElementById('maxBenefit').textContent = '+' + maxBenefit + 'pp';
+        }
+
+        function sortTable(column) {
+            // Toggle sort direction if clicking the same column
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'desc' ? 'asc' : 'desc';
+            } else {
+                currentSort.column = column;
+                // Default to a-z (asc) for text columns, z-a (desc) for numeric/result columns
+                const ascColumns = ['player', 'opponent', 'tourney_name', 'surface'];
+                currentSort.direction = ascColumns.includes(column) ? 'asc' : 'desc';
+            }
+            
+            // Update header indicators
+            document.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+            const header = document.querySelector(`th[data-column="${column}"]`);
+            if (header) {
+                header.classList.add(`sort-${currentSort.direction}`);
+            }
+            
+            currentPage = 1;
+            renderTable();
+        }
+
+        function getSortValue(row, column) {
+            if (column === 'year') {
+                return row.tourney_date ? row.tourney_date.substring(0, 4) : '';
+            }
+            
+            const value = row[column] || '';
+            
+            // Handle numeric columns
+            if (['first_in_pct', 'first_win_pct', 'second_win_pct', 'benefit_pct', 'best_of'].includes(column)) {
+                return parseFloat(value) || 0;
+            }
+            
+            // Handle boolean columns
+            if (column === 'only_first_better' || column === 'won_match' || column === 'could_flip_result') {
+                return value === 'True' ? 1 : 0;
+            }
+            
+            // Handle text columns
+            return value.toString().toLowerCase();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            
+            // Sort data
+            const sorted = [...filteredData].sort((a, b) => {
+                const aVal = getSortValue(a, currentSort.column);
+                const bVal = getSortValue(b, currentSort.column);
+                
+                let comparison = 0;
+                if (aVal > bVal) comparison = 1;
+                if (aVal < bVal) comparison = -1;
+                
+                return currentSort.direction === 'desc' ? -comparison : comparison;
+            });
+            
+            // Pagination
+            const startIdx = (currentPage - 1) * rowsPerPage;
+            const endIdx = Math.min(startIdx + rowsPerPage, sorted.length);
+            const pageData = sorted.slice(startIdx, endIdx);
+            
+            const totalPages = Math.ceil(sorted.length / rowsPerPage);
+            document.getElementById('currentPage').textContent = currentPage;
+            document.getElementById('totalPages').textContent = totalPages;
+            document.getElementById('showingCount').textContent = sorted.length.toLocaleString();
+            
+            pageData.forEach(row => {
+                const tr = document.createElement('tr');
+                const benefit = parseFloat(row.benefit_pct || 0);
+                const benefitClass = benefit > 0 ? 'benefit-positive' : 'benefit-negative';
+                const badge = row.only_first_better === 'True' ? 
+                    '<span class="badge badge-better">✓ Better</span>' : 
+                    '<span class="badge badge-worse">✗ Worse</span>';
+                const resultBadge = row.won_match === 'True' ?
+                    '<span class="badge" style="background: rgba(74,124,47,0.5); color: #d4ff00;">W</span>' :
+                    '<span class="badge" style="background: rgba(196,90,60,0.3); color: #ff6b6b;">L</span>';
+                
+                // Extract year from tourney_date (format: YYYYMMDD)
+                const year = row.tourney_date ? row.tourney_date.substring(0, 4) : 'Unknown';
+                
+                // Best of badge
+                const bestOf = row.best_of || '3';
+                const boBadge = bestOf === '5' ? 
+                    '<span class="badge" style="background: rgba(212,255,0,0.3); color: var(--ball-yellow);">BO5</span>' :
+                    '<span class="badge" style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6);">BO3</span>';
+                
+                // Flip result indicator
+                const couldFlip = row.could_flip_result === 'True';
+                const pointSwing = parseFloat(row.estimated_point_swing || 0);
+                let flipBadge = '<span style="opacity: 0.3;">—</span>';
+                
+                if (couldFlip) {
+                    const simProb = parseFloat(row.sim_prob_diff || 0);
+                    const numSims = row.num_simulations || 1000;
+                    
+                    if (row.won_match === 'True' && parseFloat(row.benefit_pct || 0) < 0) {
+                        // Won but would be worse - might have lost
+                        flipBadge = `<span class="badge" style="background: rgba(255,107,107,0.3); color: #ff6b6b;" title="${Math.abs(simProb).toFixed(1)}% more likely to lose with only 1st serves (${numSims} sims)">⚠ ${Math.abs(simProb).toFixed(0)}%</span>`;
+                    } else if (row.won_match === 'False' && parseFloat(row.benefit_pct || 0) > 0) {
+                        // Lost but would be better - might have won
+                        flipBadge = `<span class="badge badge-better" title="${simProb.toFixed(1)}% more likely to win with only 1st serves (${numSims} sims)">★ ${simProb.toFixed(0)}%</span>`;
+                    }
+                }
+                
+                tr.innerHTML = `
+                    <td><strong>${row.player || 'Unknown'}</strong></td>
+                    <td>${row.opponent || 'Unknown'}</td>
+                    <td>${resultBadge}</td>
+                    <td>${row.tourney_name || 'Unknown'}</td>
+                    <td>${year}</td>
+                    <td>${boBadge}</td>
+                    <td>${row.surface || 'Unknown'}</td>
+                    <td>${parseFloat(row.first_in_pct || 0).toFixed(1)}%</td>
+                    <td>${parseFloat(row.first_win_pct || 0).toFixed(1)}%</td>
+                    <td>${parseFloat(row.second_win_pct || 0).toFixed(1)}%</td>
+                    <td class="${benefitClass}">${benefit > 0 ? '+' : ''}${benefit.toFixed(2)}pp</td>
+                    <td>${badge}</td>
+                    <td style="text-align: center;">${flipBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function applyFilters() {
+            const playerFilter = document.getElementById('playerFilter').value.toLowerCase();
+            const surfaceFilter = document.getElementById('surfaceFilter').value;
+            const bestOfFilter = document.getElementById('bestOfFilter').value;
+            const betterOnly = document.getElementById('betterOnly').value;
+            
+            filteredData = allData.filter(row => {
+                const playerMatch = !playerFilter || 
+                    (row.player && row.player.toLowerCase().includes(playerFilter));
+                const surfaceMatch = !surfaceFilter || row.surface === surfaceFilter;
+                const bestOfMatch = !bestOfFilter || row.best_of === bestOfFilter;
+                const betterMatch = !betterOnly || 
+                    (betterOnly === 'true' && row.only_first_better === 'True');
+                
+                return playerMatch && surfaceMatch && bestOfMatch && betterMatch;
+            });
+            
+            currentPage = 1;
+            updateStats();
+            renderTable();
+        }
+
+        function changePage(delta) {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            currentPage = Math.max(1, Math.min(currentPage + delta, totalPages));
+            renderTable();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Add event listeners for real-time filtering
+        document.getElementById('playerFilter').addEventListener('input', applyFilters);
+        document.getElementById('surfaceFilter').addEventListener('change', applyFilters);
+        document.getElementById('bestOfFilter').addEventListener('change', applyFilters);
+        document.getElementById('betterOnly').addEventListener('change', applyFilters);
+    </script>
+</body>
+</html>

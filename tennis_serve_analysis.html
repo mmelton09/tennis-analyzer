@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATP Serve Analysis | When Players Should Only Hit First Serves</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --court-green: #2d5016;
+            --court-blue: #0066cc;
+            --ball-yellow: #d4ff00;
+            --chalk-white: #f8f9fa;
+            --clay-red: #c45a3c;
+            --net-shadow: #1a1a1a;
+            --grass-accent: #4a7c2f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Mono', monospace;
+            background: linear-gradient(135deg, var(--court-green) 0%, #1a3a0f 100%);
+            color: var(--chalk-white);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Tennis court lines background pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(90deg, rgba(248,249,250,0.03) 1px, transparent 1px),
+                linear-gradient(rgba(248,249,250,0.03) 1px, transparent 1px);
+            background-size: 100px 100px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            padding: 3rem 0;
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(2.5rem, 8vw, 6rem);
+            letter-spacing: 0.05em;
+            color: var(--ball-yellow);
+            text-shadow: 
+                3px 3px 0 var(--net-shadow),
+                6px 6px 0 rgba(0,0,0,0.3);
+            margin-bottom: 1rem;
+            animation: slideIn 0.8s ease-out;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--chalk-white);
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+            animation: fadeIn 1s ease-out 0.3s backwards;
+        }
+
+        /* Theory Card */
+        .theory-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid var(--ball-yellow);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            animation: fadeIn 1s ease-out 0.6s backwards;
+        }
+
+        .theory-card h2 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem;
+            color: var(--ball-yellow);
+            margin-bottom: 1rem;
+            letter-spacing: 0.05em;
+        }
+
+        .formula {
+            background: rgba(0,0,0,0.4);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.1rem;
+            border-left: 4px solid var(--ball-yellow);
+            overflow-x: auto;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--ball-yellow);
+            font-weight: 600;
+        }
+
+        input, select {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            color: var(--chalk-white);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--ball-yellow);
+            background: rgba(255,255,255,0.15);
+        }
+
+        button {
+            background: var(--ball-yellow);
+            color: var(--net-shadow);
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(212,255,0,0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212,255,0,0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Results Table */
+        .results-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            margin-bottom: 2rem;
+        }
+
+        .results-section h2 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem;
+            color: var(--ball-yellow);
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(0,0,0,0.3);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--ball-yellow);
+        }
+
+        .stat-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.5rem;
+            color: var(--ball-yellow);
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        thead {
+            background: rgba(0,0,0,0.4);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.1rem;
+            letter-spacing: 0.05em;
+            color: var(--ball-yellow);
+            border-bottom: 2px solid var(--ball-yellow);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        tbody tr {
+            transition: all 0.3s ease;
+        }
+
+        tbody tr:hover {
+            background: rgba(212,255,0,0.1);
+        }
+
+        .benefit-positive {
+            color: var(--ball-yellow);
+            font-weight: 600;
+        }
+
+        .benefit-negative {
+            color: #ff6b6b;
+            opacity: 0.6;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-better {
+            background: var(--ball-yellow);
+            color: var(--net-shadow);
+        }
+
+        .badge-worse {
+            background: rgba(255,107,107,0.3);
+            color: #ff6b6b;
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .highlight-row {
+            animation: highlightPulse 2s ease-in-out;
+        }
+
+        @keyframes highlightPulse {
+            0%, 100% {
+                background: transparent;
+            }
+            50% {
+                background: rgba(212,255,0,0.2);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>THE SERVE PARADOX</h1>
+            <p class="subtitle">
+                Discover when ATP players would statistically win more points by only hitting first serves—
+                accepting double faults rather than using their second serve.
+            </p>
+        </header>
+
+        <div class="theory-card">
+            <h2>The Math</h2>
+            <p style="margin-bottom: 1rem;">A player benefits from "only first serves" when:</p>
+            <div class="formula">
+                (1st Serve In % × 1st Serve Win %) > 2nd Serve Win %
+            </div>
+            <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+                When this condition is true, hitting two first serves (accepting double faults) 
+                gives a higher expected point win percentage than the traditional first-then-second approach.
+            </p>
+            <p style="margin-top: 1rem; padding: 1rem; background: rgba(212,255,0,0.1); border-radius: 6px; border-left: 3px solid var(--ball-yellow); font-size: 0.85rem;">
+                <strong>Note:</strong> This is demo data with 100 randomly generated matches. 
+                Specific matchups (like Djokovic vs Rublev at Indian Wells) may not appear in this random sample. 
+                The real analysis with actual ATP data would include all historical matches.
+            </p>
+        </div>
+
+        <div class="results-section">
+            <h2>Analysis Results</h2>
+            
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalMatches">0</div>
+                    <div class="stat-label">Total Performances</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="betterCount">0</div>
+                    <div class="stat-label">Would Benefit</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="betterPct">0%</div>
+                    <div class="stat-label">Benefit Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="maxBenefit">0pp</div>
+                    <div class="stat-label">Biggest Advantage</div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="input-group">
+                    <label for="playerFilter">Filter by Player</label>
+                    <input type="text" id="playerFilter" placeholder="e.g., Djokovic">
+                </div>
+                <div class="input-group">
+                    <label for="surfaceFilter">Surface</label>
+                    <select id="surfaceFilter">
+                        <option value="">All Surfaces</option>
+                        <option value="Hard">Hard</option>
+                        <option value="Clay">Clay</option>
+                        <option value="Grass">Grass</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="betterOnly">Show Only</label>
+                    <select id="betterOnly">
+                        <option value="">All Results</option>
+                        <option value="true">Benefits Only</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>&nbsp;</label>
+                    <button onclick="applyFilters()">Apply Filters</button>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Opponent</th>
+                            <th>Result</th>
+                            <th>Tournament</th>
+                            <th>Year</th>
+                            <th>Surface</th>
+                            <th>1st In %</th>
+                            <th>1st Win %</th>
+                            <th>2nd Win %</th>
+                            <th>Benefit</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Generate demo data (same as Python script)
+        function generateDemoData() {
+            const players = ["Carlos Alcaraz", "Novak Djokovic", "Jannik Sinner", "Daniil Medvedev", 
+                           "Alexander Zverev", "Andrey Rublev", "Taylor Fritz", "Hubert Hurkacz",
+                           "Stefanos Tsitsipas", "Casper Ruud", "Holger Rune", "Alex de Minaur"];
+            
+            const tournaments = ["Australian Open", "Roland Garros", "Wimbledon", "US Open", 
+                               "Miami", "Indian Wells", "Madrid", "Rome"];
+            
+            const surfaces = ["Hard", "Clay", "Grass"];
+            
+            const results = [];
+            
+            // Seed random for reproducibility
+            let seed = 42;
+            function seededRandom() {
+                seed = (seed * 9301 + 49297) % 233280;
+                return seed / 233280;
+            }
+            
+            function randomChoice(arr) {
+                return arr[Math.floor(seededRandom() * arr.length)];
+            }
+            
+            function randomInt(min, max) {
+                return Math.floor(seededRandom() * (max - min) + min);
+            }
+            
+            // Generate 100 matches
+            for (let i = 0; i < 100; i++) {
+                const winner = randomChoice(players);
+                const loser = randomChoice(players.filter(p => p !== winner));
+                const tournament = randomChoice(tournaments);
+                const surface = randomChoice(surfaces);
+                const year = randomInt(2020, 2025);
+                
+                // Winner stats
+                const w_svpt = randomInt(80, 150);
+                const w_1stIn = Math.floor(w_svpt * (0.55 + seededRandom() * 0.2));
+                const w_1stWon = Math.floor(w_1stIn * (0.65 + seededRandom() * 0.2));
+                const w_2ndWon = Math.floor((w_svpt - w_1stIn) * (0.35 + seededRandom() * 0.2));
+                
+                // Loser stats
+                const l_svpt = randomInt(80, 150);
+                const l_1stIn = Math.floor(l_svpt * (0.55 + seededRandom() * 0.2));
+                const l_1stWon = Math.floor(l_1stIn * (0.6 + seededRandom() * 0.2));
+                const l_2ndWon = Math.floor((l_svpt - l_1stIn) * (0.3 + seededRandom() * 0.2));
+                
+                // Analyze winner
+                if (w_svpt > 0 && w_1stIn > 0) {
+                    const firstInPct = w_1stIn / w_svpt;
+                    const firstWinPct = w_1stWon / w_1stIn;
+                    const secondServePoints = w_svpt - w_1stIn;
+                    
+                    if (secondServePoints > 0) {
+                        const secondWinPct = w_2ndWon / secondServePoints;
+                        const onlyFirst = firstInPct * firstWinPct + (1 - firstInPct) * firstInPct * firstWinPct;
+                        const traditional = firstInPct * firstWinPct + (1 - firstInPct) * secondWinPct;
+                        const benefit = (onlyFirst - traditional) * 100;
+                        
+                        results.push({
+                            player: winner,
+                            opponent: loser,
+                            tournament,
+                            year,
+                            surface,
+                            wonMatch: true,
+                            firstInPct: (firstInPct * 100).toFixed(1),
+                            firstWinPct: (firstWinPct * 100).toFixed(1),
+                            secondWinPct: (secondWinPct * 100).toFixed(1),
+                            benefit: benefit.toFixed(2),
+                            better: (firstInPct * firstWinPct) > secondWinPct
+                        });
+                    }
+                }
+                
+                // Analyze loser
+                if (l_svpt > 0 && l_1stIn > 0) {
+                    const firstInPct = l_1stIn / l_svpt;
+                    const firstWinPct = l_1stWon / l_1stIn;
+                    const secondServePoints = l_svpt - l_1stIn;
+                    
+                    if (secondServePoints > 0) {
+                        const secondWinPct = l_2ndWon / secondServePoints;
+                        const onlyFirst = firstInPct * firstWinPct + (1 - firstInPct) * firstInPct * firstWinPct;
+                        const traditional = firstInPct * firstWinPct + (1 - firstInPct) * secondWinPct;
+                        const benefit = (onlyFirst - traditional) * 100;
+                        
+                        results.push({
+                            player: loser,
+                            opponent: winner,
+                            tournament,
+                            year,
+                            surface,
+                            wonMatch: false,
+                            firstInPct: (firstInPct * 100).toFixed(1),
+                            firstWinPct: (firstWinPct * 100).toFixed(1),
+                            secondWinPct: (secondWinPct * 100).toFixed(1),
+                            benefit: benefit.toFixed(2),
+                            better: (firstInPct * firstWinPct) > secondWinPct
+                        });
+                    }
+                }
+            }
+            
+            return results;
+        }
+
+        let allData = [];
+        let filteredData = [];
+
+        function init() {
+            allData = generateDemoData();
+            filteredData = [...allData];
+            updateStats();
+            renderTable();
+        }
+
+        function updateStats() {
+            const total = filteredData.length;
+            const betterCount = filteredData.filter(d => d.better).length;
+            const betterPct = total > 0 ? ((betterCount / total) * 100).toFixed(1) : 0;
+            const maxBenefit = Math.max(...filteredData.map(d => parseFloat(d.benefit))).toFixed(2);
+            
+            document.getElementById('totalMatches').textContent = total;
+            document.getElementById('betterCount').textContent = betterCount;
+            document.getElementById('betterPct').textContent = betterPct + '%';
+            document.getElementById('maxBenefit').textContent = '+' + maxBenefit + 'pp';
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            
+            // Sort by benefit (descending)
+            const sorted = [...filteredData].sort((a, b) => parseFloat(b.benefit) - parseFloat(a.benefit));
+            
+            sorted.forEach(row => {
+                const tr = document.createElement('tr');
+                const benefitClass = parseFloat(row.benefit) > 0 ? 'benefit-positive' : 'benefit-negative';
+                const badge = row.better ? 
+                    '<span class="badge badge-better">✓ Better</span>' : 
+                    '<span class="badge badge-worse">✗ Worse</span>';
+                const resultBadge = row.wonMatch ?
+                    '<span class="badge" style="background: rgba(74,124,47,0.5); color: #d4ff00;">W</span>' :
+                    '<span class="badge" style="background: rgba(196,90,60,0.3); color: #ff6b6b;">L</span>';
+                
+                tr.innerHTML = `
+                    <td><strong>${row.player}</strong></td>
+                    <td>${row.opponent}</td>
+                    <td>${resultBadge}</td>
+                    <td>${row.tournament}</td>
+                    <td>${row.year}</td>
+                    <td>${row.surface}</td>
+                    <td>${row.firstInPct}%</td>
+                    <td>${row.firstWinPct}%</td>
+                    <td>${row.secondWinPct}%</td>
+                    <td class="${benefitClass}">${row.benefit > 0 ? '+' : ''}${row.benefit}pp</td>
+                    <td>${badge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function applyFilters() {
+            const playerFilter = document.getElementById('playerFilter').value.toLowerCase();
+            const surfaceFilter = document.getElementById('surfaceFilter').value;
+            const betterOnly = document.getElementById('betterOnly').value;
+            
+            filteredData = allData.filter(row => {
+                const playerMatch = !playerFilter || row.player.toLowerCase().includes(playerFilter);
+                const surfaceMatch = !surfaceFilter || row.surface === surfaceFilter;
+                const betterMatch = !betterOnly || (betterOnly === 'true' && row.better);
+                
+                return playerMatch && surfaceMatch && betterMatch;
+            });
+            
+            updateStats();
+            renderTable();
+        }
+
+        // Initialize on load
+        init();
+
+        // Add event listeners for real-time filtering
+        document.getElementById('playerFilter').addEventListener('input', applyFilters);
+        document.getElementById('surfaceFilter').addEventListener('change', applyFilters);
+        document.getElementById('betterOnly').addEventListener('change', applyFilters);
+    </script>
+</body>
+</html>
