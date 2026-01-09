@@ -4,6 +4,8 @@
 
 An interactive analysis of ATP and WTA tennis matches exploring when players might benefit from abandoning their second serve entirely.
 
+![Screenshot](screenshot.png)
+
 ## The Theory
 
 In professional tennis, players typically get two chances to serve:
@@ -45,6 +47,13 @@ But what if the statistics suggest a player would win more points by hitting **o
 - **Sortable columns**: Sort by matches played, benefit rate, avg benefit, etc.
 - **Monte Carlo simulation**: Matches flagged where the strategy could flip the match outcome
 - **Match details**: Expandable view showing opponent, tournament, surface, and all serve stats
+
+## Tech Stack
+
+- **Analysis**: Python (pandas, numpy)
+- **Frontend**: Vanilla HTML/CSS/JavaScript
+- **Deployment**: Vercel
+- **Data**: CSV processing with Monte Carlo simulation
 
 ## Data
 
